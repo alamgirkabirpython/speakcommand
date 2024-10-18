@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 import datetime
 import webbrowser
@@ -7,11 +6,11 @@ import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
 import tempfile
 import langdetect
-import base64
 from gtts import gTTS
+import base64
 
-# Google Generative AI setup
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"  # Replace with your actual API key
+# Replace with your actual API key
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Define ChatPromptTemplate
@@ -58,29 +57,6 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to listen for voice commands
-def listen():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening...")
-        audio = r.listen(source)
-        try:
-            command = r.recognize_google(audio)
-            st.write(f"You said: {command}")
-            return command
-        except sr.UnknownValueError:
-            st.write("Sorry, I could not understand the audio.")
-            return ""
-        except sr.RequestError:
-            st.write("Could not request results; check your network connection.")
-            return ""
-
-# Function to search for a YouTube video
-def search_youtube(query):
-    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
-    webbrowser.open(youtube_search_url)
-    return f"Opening YouTube and searching for {query}"
-
 # Streamlit UI
 st.title("Personal Assistant Jessica")
 
@@ -89,44 +65,55 @@ if 'greeting' not in st.session_state:
 
 st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-if st.button("Speak Command"):
-    st.session_state['listening'] = True
+# Upload audio file
+uploaded_file = st.file_uploader("Upload your audio command", type=["wav", "mp3"])
 
-    while st.session_state.get('listening', False):
-        # Listen to user command
-        query = listen()
-
-        if query:
-            query_lower = query.lower()
+if uploaded_file is not None:
+    # Use SpeechRecognition to convert audio to text
+    r = sr.Recognizer()
+    with sr.AudioFile(uploaded_file) as source:
+        audio = r.record(source)  # Read the entire audio file
+        try:
+            command = r.recognize_google(audio)
+            st.write(f"You said: {command}")
+            query_lower = command.lower()
 
             # Stop listening and exit if the user says "stop" or "exit"
             if "stop" in query_lower or "exit" in query_lower:
                 st.write("Stopping assistant.")
                 speak("Goodbye, sir.")
-                st.session_state['listening'] = False
-                break
 
-            # Check if the command is to play a song
-            elif "play" in query_lower:
-                search_term = query_lower.replace("play", "").strip()
-                result = search_youtube(search_term)
-                st.write(result)
-                speak(result)
-
-            # Check if the command is to open a website
-            elif "open" in query_lower:
-                search_term = query_lower.replace("open", "").strip()
-                webbrowser.open(f"https://{search_term}.com")
-                st.write(f"Opening {search_term}.com")
-                speak(f"Opening {search_term}.com")
-
-            # Generate AI response using Google Generative AI (Gemini) for other commands
             else:
-                chat = llm.start_chat()
-                full_translation_prompt_text = command_speaker.format(text=query)
-                full_translation_response = chat.send_message(full_translation_prompt_text)
-                ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
+                # Check if the command is to play a song
+                if "play" in query_lower:
+                    search_term = query_lower.replace("play", "").strip()
+                    search_youtube(search_term)
 
-                if ai_response:
-                    st.write(f"AI Response: {ai_response}")
-                    speak(ai_response)
+                # Check if the command is to open a website
+                elif "open" in query_lower:
+                    search_term = query_lower.replace("open", "").strip()
+                    webbrowser.open(f"https://{search_term}.com")
+                    st.write(f"Opening {search_term}.com")
+                    speak(f"Opening {search_term}.com")
+
+                # Generate AI response using Google Generative AI (Gemini) for other commands
+                else:
+                    chat = llm.start_chat()
+                    full_translation_prompt_text = command_speaker.format(text=query_lower)
+                    full_translation_response = chat.send_message(full_translation_prompt_text)
+                    ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
+
+                    if ai_response:
+                        st.write(f"AI Response: {ai_response}")
+                        speak(ai_response)
+
+        except sr.UnknownValueError:
+            st.write("Sorry, I could not understand the audio.")
+        except sr.RequestError:
+            st.write("Could not request results; check your network connection.")
+
+# Function to search for a YouTube video
+def search_youtube(query):
+    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    webbrowser.open(youtube_search_url)
+    return f"Opening YouTube and searching for {query}"
