@@ -7,7 +7,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from gtts import gTTS
 import tempfile
 import langdetect
-import base64
 
 # Your Google API Key (ensure you set this in your environment)
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
@@ -49,6 +48,12 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
+# Function to listen for voice commands (mockup, replace with your actual method)
+def listen():
+    # Replace with actual voice command listening logic
+    # For now, we can return a static command for demonstration
+    return "open google"  # Example command
+
 # Streamlit UI
 st.title("Personal Assistant Jessica")
 
@@ -57,78 +62,46 @@ if 'greeting' not in st.session_state:
 
 st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-# JavaScript for voice recognition
-st.markdown("""
-<script>
-    function startRecognition() {
-        var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.onstart = function() {
-            document.getElementById("status").innerHTML = "Listening...";
-        };
-        recognition.onresult = function(event) {
-            var transcript = event.results[0][0].transcript;
-            document.getElementById("output").innerHTML = transcript;
-            // Send the recognized command to the Streamlit server
-            fetch(`/command?query=${encodeURIComponent(transcript)}`)
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById("status").innerHTML = data;
-                });
-        };
-        recognition.onerror = function(event) {
-            document.getElementById("status").innerHTML = "Error occurred in recognition: " + event.error;
-        };
-        recognition.start();
-    }
-</script>
-""", unsafe_allow_html=True)
+if st.button("Speak Command"):
+    st.session_state['listening'] = True
+    
+    # Listen to user command
+    query = listen()  # Call the listen function to get command
 
-# Button to start voice recognition
-if st.button("Start Listening"):
-    st.markdown('<script>startRecognition();</script>', unsafe_allow_html=True)
+    if query:
+        query_lower = query.lower()
 
-# Placeholder for displaying the recognized command
-st.write("Command: ")
-output = st.empty()
-output.text("Say something...")
-
-# Handling the command after it is fetched from JavaScript
-query = st.experimental_get_query_params().get("query", [None])[0]
-
-if query:
-    query_lower = query.lower()
-
-    # Stop listening and exit if the user says "stop" or "exit"
-    if "stop" in query_lower or "exit" in query_lower:
-        st.write("Stopping assistant.")
-        audio_file = speak("Goodbye, sir.")
-        st.markdown(play_audio(audio_file), unsafe_allow_html=True)
-
-    # Check if the command is to play a song
-    elif "play" in query_lower:
-        search_term = query_lower.replace("play", "").strip()
-        result = f"Opening YouTube and searching for {search_term}."
-        webbrowser.open(f"https://www.youtube.com/results?search_query={search_term.replace(' ', '+')}")
-        st.write(result)
-        audio_file = speak(result)
-        st.markdown(play_audio(audio_file), unsafe_allow_html=True)
-
-    # Check if the command is to open a website
-    elif "open" in query_lower:
-        search_term = query_lower.replace("open", "").strip()
-        webbrowser.open(f"https://{search_term}.com")
-        st.write(f"Opening {search_term}.com")
-        audio_file = speak(f"Opening {search_term}.com")
-        st.markdown(play_audio(audio_file), unsafe_allow_html=True)
-
-    # Generate AI response using Google Generative AI (Gemini) for other commands
-    else:
-        chat = llm.start_chat()
-        full_translation_prompt_text = command_speaker.format(text=query)
-        full_translation_response = chat.send_message(full_translation_prompt_text)
-        ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
-
-        if ai_response:
-            st.write(f"AI Response: {ai_response}")
-            audio_file = speak(ai_response)
+        # Stop listening and exit if the user says "stop" or "exit"
+        if "stop" in query_lower or "exit" in query_lower:
+            st.write("Stopping assistant.")
+            audio_file = speak("Goodbye, sir.")
             st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+
+        # Check if the command is to play a song
+        elif "play" in query_lower:
+            search_term = query_lower.replace("play", "").strip()
+            result = f"Opening YouTube and searching for {search_term}."
+            webbrowser.open(f"https://www.youtube.com/results?search_query={search_term.replace(' ', '+')}")
+            st.write(result)
+            audio_file = speak(result)
+            st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+
+        # Check if the command is to open a website
+        elif "open" in query_lower:
+            search_term = query_lower.replace("open", "").strip()
+            webbrowser.open(f"https://{search_term}.com")
+            st.write(f"Opening {search_term}.com")
+            audio_file = speak(f"Opening {search_term}.com")
+            st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+
+        # Generate AI response using Google Generative AI (Gemini) for other commands
+        else:
+            chat = llm.start_chat()
+            full_translation_prompt_text = command_speaker.format(text=query)
+            full_translation_response = chat.send_message(full_translation_prompt_text)
+            ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
+
+            if ai_response:
+                st.write(f"AI Response: {ai_response}")
+                audio_file = speak(ai_response)
+                st.markdown(play_audio(audio_file), unsafe_allow_html=True)
