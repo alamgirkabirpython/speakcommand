@@ -68,7 +68,7 @@ st.title("Personal Assistant Jessica")
 if 'greeting' not in st.session_state:
     st.session_state['greeting'] = wiseMe()
 
-st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
+st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you.")
 
 # HTML and JavaScript for microphone input
 st.markdown(
