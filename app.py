@@ -10,14 +10,11 @@ import requests
 from gtts import gTTS
 import tempfile
 import langdetect
-import pygame
+import base64
 
 # Google Generative AI setup
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
-
-# Initialize pygame mixer for audio playback
-pygame.mixer.init()
 
 # Define ChatPromptTemplate
 command_speaker = ChatPromptTemplate.from_messages(
@@ -30,18 +27,32 @@ command_speaker = ChatPromptTemplate.from_messages(
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
-# Function to speak text using gTTS (Text-to-Speech for all languages)
+# Function to create audio file using gTTS and provide download link
+def create_audio_file(text, lang):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        tts = gTTS(text=text, lang=lang)
+        tts.save(fp.name)
+        return fp.name
+
+# Function to provide download link for the generated audio file
+def download_audio_file(file_path):
+    with open(file_path, "rb") as audio_file:
+        audio_bytes = audio_file.read()
+        b64_audio = base64.b64encode(audio_bytes).decode()
+        audio_html = f'<a href="data:audio/mp3;base64,{b64_audio}" download="output.mp3">Download Audio</a>'
+        st.markdown(audio_html, unsafe_allow_html=True)
+
+# Function to detect language and return appropriate TTS response
 def speak(text):
     # Detect the language of the text
     lang = langdetect.detect(text)
-
-    with tempfile.NamedTemporaryFile(delete=True) as fp:
-        tts = gTTS(text=text, lang=lang)  # gTTS supports language detection
-        tts.save(f"{fp.name}.mp3")
-        pygame.mixer.music.load(f"{fp.name}.mp3")
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            continue
+    
+    # Create an audio file with gTTS
+    audio_file = create_audio_file(text, lang)
+    
+    # Provide a download link for the audio file
+    st.write("Audio generated.")
+    download_audio_file(audio_file)
 
 # Greeting based on the time of day
 def wiseMe():
