@@ -1,6 +1,6 @@
 streamlit
-google-generativeai
-SpeechRecognition
+speechrecognition
 gtts
+google-generativeai
 langdetect
-requests
+langchain-core
