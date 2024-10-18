@@ -7,10 +7,6 @@ from langchain_core.prompts import ChatPromptTemplate
 import langdetect
 from gtts import gTTS
 import tempfile
-import pygame
-
-# Initialize pygame mixer for audio playback
-pygame.mixer.init()
 
 # Google Generative AI API Key configuration
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
@@ -27,19 +23,16 @@ command_speaker = ChatPromptTemplate.from_messages(
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
-# Function to speak text using gTTS for all languages
+# Function to generate text-to-speech audio file using gTTS
 def speak(text):
     # Detect the language of the text
     lang = langdetect.detect(text)
     
-    # Use gTTS for all languages
+    # Use gTTS to convert text to speech and save it as a file
     tts = gTTS(text=text, lang=lang)
-    with tempfile.NamedTemporaryFile(delete=True) as fp:
-        tts.save(f"{fp.name}.mp3")
-        pygame.mixer.music.load(f"{fp.name}.mp3")
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            continue
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        tts.save(fp.name)
+        return fp.name  # Return the file path for the generated speech
 
 # Greeting based on the time of day
 def wiseMe():
@@ -98,8 +91,9 @@ if st.button("Speak Command"):
             # Stop listening and exit if the user says "stop" or "exit"
             if "stop" in query_lower or "exit" in query_lower:
                 st.write("Stopping assistant.")
-                speak("Goodbye, sir.")
+                audio_file = speak("Goodbye, sir.")
                 st.session_state['listening'] = False
+                st.audio(audio_file)  # Play the audio file in the browser
                 break
 
             # Check if the command is to play a song
@@ -107,14 +101,16 @@ if st.button("Speak Command"):
                 search_term = query_lower.replace("play", "").strip()
                 result = search_youtube(search_term)
                 st.write(result)
-                speak(result)
+                audio_file = speak(result)
+                st.audio(audio_file)  # Play the audio file in the browser
 
             # Check if the command is to open a website
             elif "open" in query_lower:
                 search_term = query_lower.replace("open", "").strip()
                 webbrowser.open(f"https://{search_term}.com")
                 st.write(f"Opening {search_term}.com")
-                speak(f"Opening {search_term}.com")
+                audio_file = speak(f"Opening {search_term}.com")
+                st.audio(audio_file)  # Play the audio file in the browser
 
             # Generate AI response using Google Generative AI (Gemini) for other commands
             else:
@@ -125,4 +121,5 @@ if st.button("Speak Command"):
 
                 if ai_response:
                     st.write(f"AI Response: {ai_response}")
-                    speak(ai_response)
+                    audio_file = speak(ai_response)
+                    st.audio(audio_file)  # Play the audio file in the browser
