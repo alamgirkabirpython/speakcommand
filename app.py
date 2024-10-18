@@ -25,8 +25,11 @@ html_code = """
                     // Update the page with the recognized text
                     document.getElementById("result").innerText = speech_to_text;
 
-                    // Redirect to the same page with the transcribed text in the URL
-                    window.location.href = window.location.href.split('?')[0] + "?input_text=" + encodeURIComponent(speech_to_text);
+                    // Send the transcribed text to Streamlit
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/update_transcribed_text", true);
+                    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                    xhr.send(JSON.stringify({ text: speech_to_text }));
                 };
 
                 recognition.onerror = function(e) {
@@ -49,16 +52,20 @@ html_code = """
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Get the input text from the query parameters
-input_text = st.experimental_get_query_params().get("input_text", [""])[0]
+# Streamlit's server-side to handle the transcribed text
+def update_transcribed_text():
+    if st.session_state.get("input_text"):
+        st.session_state.transcribed_text = st.session_state.input_text
+    else:
+        st.session_state.transcribed_text = ""
 
-# Use session state to hold transcribed text
-if 'transcribed_text' not in st.session_state:
+# Use a callback route to receive the transcribed text from JavaScript
+if "transcribed_text" not in st.session_state:
     st.session_state.transcribed_text = ""
 
-# Update the session state with the new input text if it exists
-if input_text:
-    st.session_state.transcribed_text = input_text
+# Handle the input from JavaScript
+if st.button("Get Transcribed Text"):
+    update_transcribed_text()
 
 # Show the transcribed text in the placeholder
 transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.transcribed_text}**")
