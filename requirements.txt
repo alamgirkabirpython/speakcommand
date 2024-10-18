@@ -1,7 +1,8 @@
 streamlit
 speechrecognition
 pyttsx3
-pygame
 gtts
+pygame
 google-generativeai
 langdetect
+langchain-core
