@@ -1,62 +1,143 @@
 import streamlit as st
+import datetime
+import webbrowser
+import os
+import speech_recognition as sr
+import pyttsx3
+import google.generativeai as genai
+from langchain_core.prompts import ChatPromptTemplate
+import re  
+import requests  
+from gtts import gTTS
+import tempfile 
+import langdetect 
+import pygame  
+
+
+# Initialize API Key for Google Generative AI
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+genai.configure(api_key=api_key)
+
+# Initialize pygame mixer for audio playback
+pygame.mixer.init()
+
+# Define ChatPromptTemplate
+command_speaker = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful assistant. You follow the command that the user gives."),
+        ("user", "Follow the command: {text}")
+    ]
+)
+
+# Initialize Google Generative AI Model
+llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
+
+# Function to speak text using either pyttsx3 (for English) or gTTS (for Bangla, Hindi)
+def speak(text):
+    # Detect the language of the text
+    lang = langdetect.detect(text)
+    
+    if lang == 'bn':  # If text is Bangla, use gTTS
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='bn')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    elif lang == 'hi':  # If text is Hindi, use gTTS
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='hi')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    else:  # Use pyttsx3 for English or other languages
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
+
+# Greeting based on the time of day
+def wiseMe():
+    hour = int(datetime.datetime.now().hour)
+    if hour >= 0 and hour < 12:
+        greeting = "Good Morning!"
+    elif hour >= 12 and hour < 18:
+        greeting = "Good Afternoon!"
+    else:
+        greeting = "Good Evening!"
+    return greeting
+
+# Function to listen for voice commands
+def listen():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        audio = r.listen(source)
+        try:
+            command = r.recognize_google(audio)
+            st.write(f"You said: {command}")
+            return command
+        except sr.UnknownValueError:
+            st.write("Sorry, I could not understand the audio.")
+            return ""
+        except sr.RequestError:
+            st.write("Could not request results; check your network connection.")
+            return ""
+
+# Function to search for a YouTube video
+def search_youtube(query):
+    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    webbrowser.open(youtube_search_url)
+    return f"Opening YouTube and searching for {query}"
 
 # Streamlit UI
-st.title("Simple Voice Input App")
+st.title("Personal Assistant Jessica")
 
-# Display instructions
-st.write("Click the button below and start speaking.")
+if 'greeting' not in st.session_state:
+    st.session_state['greeting'] = wiseMe()
 
-# Create a placeholder for displaying the transcribed text
-transcribed_text_placeholder = st.empty()
+st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-# HTML + JavaScript for capturing voice input
-html_code = """
-    <script>
-        function startDictation() {
-            if (window.hasOwnProperty('webkitSpeechRecognition')) {
-                var recognition = new webkitSpeechRecognition();
-                
-                recognition.continuous = false;  // Stop after a single recognition
-                recognition.interimResults = false;  // No intermediate results
-                recognition.lang = "en-US";  // Set the language
+if st.button("Speak Command"):
+    st.session_state['listening'] = True
 
-                recognition.onresult = function(e) {
-                    var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
-                    // Update the page with the recognized text
-                    document.getElementById("result").innerText = speech_to_text;
-                    // Send the text back to Streamlit using the session storage method
-                    const queryString = "?input_text=" + encodeURIComponent(speech_to_text);
-                    window.location.href = window.location.href.split('?')[0] + queryString;
-                };
+    while st.session_state.get('listening', False):
+        # Listen to user command
+        query = listen()
 
-                recognition.onerror = function(e) {
-                    console.error('Speech recognition error', e);
-                    alert('Error occurred: ' + e.error);
-                };
+        if query:
+            query_lower = query.lower()
 
-                recognition.start();  // Start the speech recognition
-            } else {
-                alert("Sorry, your browser does not support speech recognition.");
-            }
-        }
-    </script>
+            # Stop listening and exit if the user says "stop" or "exit"
+            if "stop" in query_lower or "exit" in query_lower:
+                st.write("Stopping assistant.")
+                speak("Goodbye, sir.")
+                st.session_state['listening'] = False
+                break
 
-    <button onclick="startDictation()">Click to Speak</button>
-    <h2>Transcribed Text:</h2>
-    <p id="result"></p>
-"""
+            # Check if the command is to play a song
+            elif "play" in query_lower:
+                search_term = query_lower.replace("play", "").strip()
+                result = search_youtube(search_term)
+                st.write(result)
+                speak(result)
 
-# Embedding the HTML into the Streamlit app
-st.components.v1.html(html_code)
+            # Check if the command is to open a website
+            elif "open" in query_lower:
+                search_term = query_lower.replace("open", "").strip()
+                webbrowser.open(f"https://{search_term}.com")
+                st.write(f"Opening {search_term}.com")
+                speak(f"Opening {search_term}.com")
 
-# Check if there's any input text from the query parameters
-input_text = st.experimental_get_query_params().get("input_text", [""])[0]
+            # Generate AI response using Google Generative AI (Gemini) for other commands
+            else:
+                chat = llm.start_chat()
+                full_translation_prompt_text = command_speaker.format(text=query)
+                full_translation_response = chat.send_message(full_translation_prompt_text)
+                ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
 
-# Display the transcribed text if it exists
-if input_text:
-    st.session_state.transcribed_text = input_text
-else:
-    st.session_state.transcribed_text = ""
-
-# Show the transcribed text in the placeholder
-transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.transcribed_text}**")
+                if ai_response:
+                    st.write(f"AI Response: {ai_response}")
+                    speak(ai_response)
