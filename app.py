@@ -14,23 +14,26 @@ html_code = """
             if (window.hasOwnProperty('webkitSpeechRecognition')) {
                 var recognition = new webkitSpeechRecognition();
                 
-                recognition.continuous = false;
-                recognition.interimResults = false;
-
-                recognition.lang = "en-US";
+                recognition.continuous = false;  // Stop after a single recognition
+                recognition.interimResults = false;  // No intermediate results
+                recognition.lang = "en-US";  // Set the language
 
                 recognition.onresult = function(e) {
-                    var speech_to_text = e.results[0][0].transcript;
-                    // Set the query parameter with the transcribed text
+                    var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
+                    // Redirect to the same URL with the input text as a query parameter
                     window.location.href = window.location.href.split('?')[0] + '?input_text=' + encodeURIComponent(speech_to_text);
-                    recognition.stop();
                 };
 
                 recognition.onerror = function(e) {
                     console.error('Speech recognition error', e);
+                    alert('Error occurred: ' + e.error);
                 };
 
-                recognition.start();
+                recognition.onend = function() {
+                    console.log("Speech recognition service has stopped.");
+                };
+
+                recognition.start();  // Start the speech recognition
             } else {
                 alert("Sorry, your browser does not support speech recognition.");
             }
@@ -50,6 +53,6 @@ input_text = query_params.get("input_text", [""])[0]
 # Check if input_text is provided
 if input_text:
     # Display the transcribed text (query you said)
-    st.write(f"Transcribed Text: {input_text}")
+    st.write(f"Transcribed Text: **{input_text}**")
 else:
     st.write("Please click the button and speak.")
