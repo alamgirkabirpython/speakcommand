@@ -21,9 +21,9 @@ html_code = """
                     var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
                     // Update the page with the recognized text
                     document.getElementById("result").innerText = speech_to_text;
-                    // Send the text back to Streamlit
-                    const queryString = "?input_text=" + encodeURIComponent(speech_to_text);
-                    window.location.href = window.location.href.split('?')[0] + queryString;
+
+                    // Send the text back to Streamlit using local storage
+                    localStorage.setItem("transcribedText", speech_to_text);
                 };
 
                 recognition.onerror = function(e) {
@@ -36,6 +36,11 @@ html_code = """
                 alert("Sorry, your browser does not support speech recognition.");
             }
         }
+
+        // Function to retrieve the transcribed text from local storage
+        function retrieveText() {
+            return localStorage.getItem("transcribedText");
+        }
     </script>
 
     <button onclick="startDictation()">Click to Speak</button>
@@ -46,11 +51,15 @@ html_code = """
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Retrieve the transcribed text from the URL parameters
-input_text = st.experimental_get_query_params().get("input_text", [""])[0]
+# Use session state to hold transcribed text
+if 'transcribed_text' not in st.session_state:
+    st.session_state.transcribed_text = ""
+
+# Check if there is transcribed text in local storage and update the session state
+st.session_state.transcribed_text = st.experimental_get_query_params().get("input_text", [""])[0]
 
 # Display the transcribed text if it exists
-if input_text:
-    st.write(f"Transcribed Text: **{input_text}**")
+if st.session_state.transcribed_text:
+    st.write(f"Transcribed Text: **{st.session_state.transcribed_text}**")
 else:
     st.write("Please click the button and speak.")
