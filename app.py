@@ -61,7 +61,7 @@ def listen():
         st.write("Listening...")
         audio = r.listen(source)
         try:
-            command = r.recognize_google(audio)  # Use Google Web Speech API
+            command = r.recognize_google(audio)  # Use Google Web Speech API for recognition
             st.write(f"You said: {command}")
             return command
         except sr.UnknownValueError:
