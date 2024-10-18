@@ -6,7 +6,7 @@ import langdetect
 from gtts import gTTS
 
 # API key for Google Generative AI
-api_key ="AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
@@ -84,10 +84,21 @@ query_params = st.experimental_get_query_params()
 input_text = query_params.get("input_text", [""])[0]
 
 if input_text:
-    st.write(f"Transcribed Text: {input_text}")
+    # Display the transcribed text (the query you say)
+    st.write(f"Query You Said: {input_text}")
+    
+    # Print the query in the console (for debugging or logs)
+    print(f"Query: {input_text}")
     
     # Use Generative AI to respond
     chat = llm.start_chat()
     ai_response = chat.send_message(input_text).candidates[0].content.parts[0].text.strip()
+    
+    # Display the AI response
     st.write(f"AI Response: {ai_response}")
+    
+    # Print the AI response in the console (for debugging or logs)
+    print(f"AI Response: {ai_response}")
+    
+    # Speak the AI response
     speak(ai_response)
