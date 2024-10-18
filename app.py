@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from gtts import gTTS
 import tempfile
 import langdetect
-import base64  # Import base64 for audio playback
+import base64
 
 # Your Google API Key (ensure you set this in your environment)
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
@@ -49,12 +49,6 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to listen for voice commands (mockup, replace with your actual method)
-def listen():
-    # Replace with actual voice command listening logic
-    # For now, we can return a static command for demonstration
-    return "open google"  # Example command
-
 # Streamlit UI
 st.title("Personal Assistant Jessica")
 
@@ -63,46 +57,64 @@ if 'greeting' not in st.session_state:
 
 st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-if st.button("Speak Command"):
-    st.session_state['listening'] = True
+# JavaScript to capture voice input
+st.markdown(
+    """
+    <script>
+    const recordButton = document.getElementById("record");
+    const audioPlayer = document.getElementById("audioPlayer");
     
-    # Listen to user command
-    query = listen()  # Call the listen function to get command
+    recordButton.onclick = function() {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const mediaRecorder = new MediaRecorder(stream);
+            const audioChunks = [];
+            
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks);
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.play();
 
-    if query:
-        query_lower = query.lower()
+                // Send audio blob to server for speech recognition
+                const formData = new FormData();
+                formData.append('audio', audioBlob);
 
-        # Stop listening and exit if the user says "stop" or "exit"
-        if "stop" in query_lower or "exit" in query_lower:
-            st.write("Stopping assistant.")
-            audio_file = speak("Goodbye, sir.")
-            st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+                fetch('/process_audio', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("result").innerText = "You said: " + data.transcript;
+                    // Process command here if needed
+                });
+            };
+            
+            mediaRecorder.start();
+            setTimeout(() => {
+                mediaRecorder.stop();
+            }, 3000); // Record for 3 seconds
+        });
+    };
+    </script>
+    """,
+    unsafe_allow_html=True
+)
 
-        # Check if the command is to play a song
-        elif "play" in query_lower:
-            search_term = query_lower.replace("play", "").strip()
-            result = f"Opening YouTube and searching for {search_term}."
-            webbrowser.open(f"https://www.youtube.com/results?search_query={search_term.replace(' ', '+')}")
-            st.write(result)
-            audio_file = speak(result)
-            st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+# Button to start recording
+st.button("Start Recording", key="record")
 
-        # Check if the command is to open a website
-        elif "open" in query_lower:
-            search_term = query_lower.replace("open", "").strip()
-            webbrowser.open(f"https://{search_term}.com")
-            st.write(f"Opening {search_term}.com")
-            audio_file = speak(f"Opening {search_term}.com")
-            st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+# Audio player for playback
+st.markdown('<audio id="audioPlayer" controls></audio>', unsafe_allow_html=True)
 
-        # Generate AI response using Google Generative AI (Gemini) for other commands
-        else:
-            chat = llm.start_chat()
-            full_translation_prompt_text = command_speaker.format(text=query)
-            full_translation_response = chat.send_message(full_translation_prompt_text)
-            ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
+# Placeholder for displaying results
+st.markdown('<div id="result"></div>', unsafe_allow_html=True)
 
-            if ai_response:
-                st.write(f"AI Response: {ai_response}")
-                audio_file = speak(ai_response)
-                st.markdown(play_audio(audio_file), unsafe_allow_html=True)
+# Add your command processing logic here
+if st.button("Stop Recording"):
+    st.write("Recording stopped. Please analyze the command.")
+
