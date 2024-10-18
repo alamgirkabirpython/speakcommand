@@ -4,4 +4,3 @@ SpeechRecognition
 gtts
 langdetect
 requests
-streamlit_audio_recorder
