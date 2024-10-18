@@ -41,4 +41,5 @@ html_code = """
 """
 
 # Embedding the HTML into the Streamlit app
-st.components.v1.html(html_code)
+input_text=st.components.v1.html(html_code)
+st.write(f"Transcribed Text: **{input_text}**")
