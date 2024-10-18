@@ -5,15 +5,13 @@ import webbrowser
 import speech_recognition as sr
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
-import re
-import requests
-from gtts import gTTS
 import tempfile
 import langdetect
 import base64
+from gtts import gTTS
 
 # Google Generative AI setup
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key = "YOUR_API_KEY_HERE"  # Replace with your actual API key
 genai.configure(api_key=api_key)
 
 # Define ChatPromptTemplate
@@ -44,10 +42,10 @@ def download_audio_file(file_path):
 
 # Function to detect language and return appropriate TTS response
 def speak(text):
-    lang = langdetect.detect(text)
-    audio_file = create_audio_file(text, lang)
+    lang = langdetect.detect(text)  # Detect the language of the text
+    audio_file = create_audio_file(text, lang)  # Create audio file
     st.write("Audio generated.")
-    download_audio_file(audio_file)
+    download_audio_file(audio_file)  # Provide download link
 
 # Greeting based on the time of day
 def wiseMe():
@@ -60,10 +58,22 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to get user input for commands
-def get_user_command():
-    command = st.text_input("Enter your command:", "")
-    return command
+# Function to listen for voice commands
+def listen():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        audio = r.listen(source)
+        try:
+            command = r.recognize_google(audio)
+            st.write(f"You said: {command}")
+            return command
+        except sr.UnknownValueError:
+            st.write("Sorry, I could not understand the audio.")
+            return ""
+        except sr.RequestError:
+            st.write("Could not request results; check your network connection.")
+            return ""
 
 # Function to search for a YouTube video
 def search_youtube(query):
@@ -83,8 +93,8 @@ if st.button("Speak Command"):
     st.session_state['listening'] = True
 
     while st.session_state.get('listening', False):
-        # Get user command
-        query = get_user_command()
+        # Listen to user command
+        query = listen()
 
         if query:
             query_lower = query.lower()
