@@ -9,6 +9,7 @@ import tempfile
 import langdetect
 import base64
 
+# Your Google API Key (ensure you set this in your environment)
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
@@ -67,9 +68,8 @@ st.markdown("""
         recognition.onresult = function(event) {
             var transcript = event.results[0][0].transcript;
             document.getElementById("output").innerHTML = transcript;
-            // Trigger submit with the recognized command
-            const command = transcript;
-            fetch(`/execute_command?command=${encodeURIComponent(command)}`)
+            // Send the recognized command to the Streamlit server
+            fetch(`/command?query=${encodeURIComponent(transcript)}`)
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById("status").innerHTML = data;
@@ -87,35 +87,35 @@ st.markdown("""
 if st.button("Start Listening"):
     st.markdown('<script>startRecognition();</script>', unsafe_allow_html=True)
 
-# Placeholder for displaying the command
+# Placeholder for displaying the recognized command
 st.write("Command: ")
 output = st.empty()
 output.text("Say something...")
 
-# Streamlit's command execution handling
-command = st.experimental_get_query_params().get("command", [None])[0]
+# Handling the command after it is fetched from JavaScript
+query = st.experimental_get_query_params().get("query", [None])[0]
 
-if command:
-    command_lower = command.lower()
+if query:
+    query_lower = query.lower()
 
     # Stop listening and exit if the user says "stop" or "exit"
-    if "stop" in command_lower or "exit" in command_lower:
+    if "stop" in query_lower or "exit" in query_lower:
         st.write("Stopping assistant.")
         audio_file = speak("Goodbye, sir.")
         st.markdown(play_audio(audio_file), unsafe_allow_html=True)
 
     # Check if the command is to play a song
-    elif "play" in command_lower:
-        search_term = command_lower.replace("play", "").strip()
+    elif "play" in query_lower:
+        search_term = query_lower.replace("play", "").strip()
         result = f"Opening YouTube and searching for {search_term}."
-        search_youtube(search_term)
+        webbrowser.open(f"https://www.youtube.com/results?search_query={search_term.replace(' ', '+')}")
         st.write(result)
         audio_file = speak(result)
         st.markdown(play_audio(audio_file), unsafe_allow_html=True)
 
     # Check if the command is to open a website
-    elif "open" in command_lower:
-        search_term = command_lower.replace("open", "").strip()
+    elif "open" in query_lower:
+        search_term = query_lower.replace("open", "").strip()
         webbrowser.open(f"https://{search_term}.com")
         st.write(f"Opening {search_term}.com")
         audio_file = speak(f"Opening {search_term}.com")
@@ -124,7 +124,7 @@ if command:
     # Generate AI response using Google Generative AI (Gemini) for other commands
     else:
         chat = llm.start_chat()
-        full_translation_prompt_text = command_speaker.format(text=command)
+        full_translation_prompt_text = command_speaker.format(text=query)
         full_translation_response = chat.send_message(full_translation_prompt_text)
         ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
 
