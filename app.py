@@ -22,11 +22,11 @@ html_code = """
 
                 recognition.onresult = function(e) {
                     var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
-
-                    // Send the transcribed text back to Streamlit using session storage
-                    const hiddenInput = document.getElementById("hiddenInput");
-                    hiddenInput.value = speech_to_text;
-                    hiddenInput.dispatchEvent(new Event('change'));
+                    // Update the page with the recognized text
+                    document.getElementById("result").innerText = speech_to_text;
+                    // Send the text back to Streamlit using the session storage method
+                    const queryString = "?input_text=" + encodeURIComponent(speech_to_text);
+                    window.location.href = window.location.href.split('?')[0] + queryString;
                 };
 
                 recognition.onerror = function(e) {
@@ -42,7 +42,6 @@ html_code = """
     </script>
 
     <button onclick="startDictation()">Click to Speak</button>
-    <input type="hidden" id="hiddenInput" onchange="updateStreamlit()">
     <h2>Transcribed Text:</h2>
     <p id="result"></p>
 """
@@ -50,13 +49,14 @@ html_code = """
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Capture the value from the hidden input field
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
+# Check if there's any input text from the query parameters
+input_text = st.experimental_get_query_params().get("input_text", [""])[0]
 
-hidden_input_value = st.text_input("Hidden Input", key="hidden_input", label_visibility="collapsed")
-if hidden_input_value:
-    st.session_state.input_text = hidden_input_value  # Store in session state
+# Display the transcribed text if it exists
+if input_text:
+    st.session_state.transcribed_text = input_text
+else:
+    st.session_state.transcribed_text = ""
 
-# Display the transcribed text
-transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.input_text}**")
+# Show the transcribed text in the placeholder
+transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.transcribed_text}**")
