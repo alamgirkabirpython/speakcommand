@@ -4,19 +4,14 @@ import webbrowser
 import speech_recognition as sr
 import pyttsx3
 import google.generativeai as genai
-import re  
-import requests  
+import tempfile
+import langdetect
 from gtts import gTTS
-import tempfile 
-import langdetect 
-import pygame  
+import os
 
 # API key for Google Generative AI
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key = "YOUR_API_KEY"
 genai.configure(api_key=api_key)
-
-# Initialize pygame mixer for audio playback
-pygame.mixer.init()
 
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
@@ -26,25 +21,27 @@ def speak(text):
     lang = langdetect.detect(text)
     
     if lang == 'bn':  # Bangla
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='bn')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
+        tts = gTTS(text=text, lang='bn')
+        temp_file_path = save_tts_to_temp(tts)
+        st.audio(temp_file_path)
+        
     elif lang == 'hi':  # Hindi
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='hi')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
+        tts = gTTS(text=text, lang='hi')
+        temp_file_path = save_tts_to_temp(tts)
+        st.audio(temp_file_path)
+        
     else:  # English
         engine = pyttsx3.init()
         engine.say(text)
         engine.runAndWait()
+
+# Function to save TTS output to a temporary file
+def save_tts_to_temp(tts):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    temp_file_path = temp_file.name
+    tts.save(temp_file_path)
+    temp_file.close()
+    return temp_file_path
 
 # Greeting based on the time of day
 def wiseMe():
