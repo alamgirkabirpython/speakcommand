@@ -1,12 +1,9 @@
-streamlit
+streamlit==1.21.0
 datetime
-webbrowser
 speechrecognition
-pyttsx3
 google-generativeai
 langdetect
 gtts
 pygame
-tempfile
 requests
 langchain-core
