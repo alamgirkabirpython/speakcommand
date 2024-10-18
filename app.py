@@ -7,6 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from gtts import gTTS
 import tempfile
 import langdetect
+import distutils
 
 # Initialize API Key for Google Generative AI
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
