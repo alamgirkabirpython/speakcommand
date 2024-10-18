@@ -7,6 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from gtts import gTTS
 import tempfile
 import langdetect
+import base64  # Import base64 for audio playback
 
 # Your Google API Key (ensure you set this in your environment)
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
