@@ -1,24 +1,16 @@
 import streamlit as st
 import datetime
 import webbrowser
-import os
 import speech_recognition as sr
-import pyttsx3
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
-import re  
-import requests  
 from gtts import gTTS
 import tempfile 
-import langdetect 
-import pygame  
+import langdetect
 
-
+# Initialize API Key for Google Generative AI
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
-
-# Initialize pygame mixer for audio playback
-pygame.mixer.init()
 
 # Define ChatPromptTemplate
 command_speaker = ChatPromptTemplate.from_messages(
@@ -31,31 +23,14 @@ command_speaker = ChatPromptTemplate.from_messages(
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
-# Function to speak text using either pyttsx3 (for English) or gTTS (for Bangla, Hindi)
+# Function to generate downloadable speech audio using gTTS
 def speak(text):
-    # Detect the language of the text
     lang = langdetect.detect(text)
-    
-    if lang == 'bn':  # If text is Bangla, use gTTS
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='bn')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
-    elif lang == 'hi':  # If text is Hindi, use gTTS
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='hi')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
-    else:  # Use pyttsx3 for English or other languages
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        tts = gTTS(text=text, lang=lang)
+        tts.save(fp.name)
+        st.audio(fp.name, format='audio/mp3')
+        st.download_button("Download Audio", data=open(fp.name, 'rb').read(), file_name=f"response_{lang}.mp3")
 
 # Greeting based on the time of day
 def wiseMe():
