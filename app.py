@@ -3,10 +3,9 @@ import datetime
 import webbrowser
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
-import langdetect
 
 # Google Generative AI API Key configuration
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key = "YOUR_API_KEY"  # Replace with your actual API key
 genai.configure(api_key=api_key)
 
 # Define ChatPromptTemplate
@@ -109,6 +108,3 @@ if command:
 
         if ai_response:
             st.write(f"AI Response: {ai_response}")
-
-# Button to start listening
-st.button("Start Listening", on_click=lambda: None)  # Placeholder button
