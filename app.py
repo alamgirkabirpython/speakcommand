@@ -21,8 +21,9 @@ html_code = """
                     var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
                     // Update the page with the recognized text
                     document.getElementById("result").innerText = speech_to_text;
-                    // Also, send the text back to the Streamlit app
-                    window.parent.postMessage(speech_to_text, "*");
+                    // Send the text back to Streamlit
+                    const queryString = "?input_text=" + encodeURIComponent(speech_to_text);
+                    window.location.href = window.location.href.split('?')[0] + queryString;
                 };
 
                 recognition.onerror = function(e) {
@@ -45,7 +46,11 @@ html_code = """
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Listen for messages from the JavaScript code
-if st.experimental_get_query_params().get("input_text"):
-    transcribed_text = st.experimental_get_query_params()["input_text"][0]
-    st.write(f"Hello every one: **{transcribed_text}**")
+# Retrieve the transcribed text from the URL parameters
+input_text = st.experimental_get_query_params().get("input_text", [""])[0]
+
+# Display the transcribed text if it exists
+if input_text:
+    st.write(f"Transcribed Text: **{input_text}**")
+else:
+    st.write("Please click the button and speak.")
