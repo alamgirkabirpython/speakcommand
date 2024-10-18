@@ -1,42 +1,50 @@
 import streamlit as st
 import datetime
 import webbrowser
-import os
+import speech_recognition as sr
+import pyttsx3
 import google.generativeai as genai
-from langchain_core.prompts import ChatPromptTemplate
+import re  
+import requests  
 from gtts import gTTS
-import tempfile
-import langdetect
-import base64
+import tempfile 
+import langdetect 
+import pygame  
 
-# Your Google API Key (ensure you set this in your environment)
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+# API key for Google Generative AI
+api_key = "YOUR_API_KEY"
 genai.configure(api_key=api_key)
 
-# Define ChatPromptTemplate
-command_speaker = ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are a helpful assistant. You follow the command that the user gives."),
-        ("user", "Follow the command: {text}")
-    ]
-)
+# Initialize pygame mixer for audio playback
+pygame.mixer.init()
 
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
-# Function to generate audio and create a playable link
+# Function to speak text using pyttsx3 (for English) or gTTS (for Bangla, Hindi)
 def speak(text):
     lang = langdetect.detect(text)
-    tts = gTTS(text=text, lang=lang)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-        tts.save(fp.name)
-        return fp.name  # Return the path of the saved audio file
-
-# Function to play the audio
-def play_audio(file_path):
-    audio_file = open(file_path, "rb").read()
-    audio_b64 = base64.b64encode(audio_file).decode()
-    return f'<audio controls autoplay><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
+    
+    if lang == 'bn':  # Bangla
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='bn')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    elif lang == 'hi':  # Hindi
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='hi')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    else:  # English
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
 
 # Greeting based on the time of day
 def wiseMe():
@@ -49,6 +57,29 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
+# Function to listen for voice commands
+def listen():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        audio = r.listen(source)
+        try:
+            command = r.recognize_google(audio)
+            st.write(f"You said: {command}")
+            return command
+        except sr.UnknownValueError:
+            st.write("Sorry, I could not understand the audio.")
+            return ""
+        except sr.RequestError:
+            st.write("Could not request results; check your network connection.")
+            return ""
+
+# Function to search for a YouTube video
+def search_youtube(query):
+    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    webbrowser.open(youtube_search_url)
+    return f"Opening YouTube and searching for {query}"
+
 # Streamlit UI
 st.title("Personal Assistant Jessica")
 
@@ -57,64 +88,37 @@ if 'greeting' not in st.session_state:
 
 st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-# JavaScript to capture voice input
-st.markdown(
-    """
-    <script>
-    const recordButton = document.getElementById("record");
-    const audioPlayer = document.getElementById("audioPlayer");
-    
-    recordButton.onclick = function() {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            const mediaRecorder = new MediaRecorder(stream);
-            const audioChunks = [];
-            
-            mediaRecorder.ondataavailable = event => {
-                audioChunks.push(event.data);
-            };
-            
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks);
-                const audioUrl = URL.createObjectURL(audioBlob);
-                audioPlayer.src = audioUrl;
-                audioPlayer.play();
+if st.button("Speak Command"):
+    st.session_state['listening'] = True
 
-                // Send audio blob to server for speech recognition
-                const formData = new FormData();
-                formData.append('audio', audioBlob);
+    while st.session_state.get('listening', False):
+        query = listen()
 
-                fetch('/process_audio', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("result").innerText = "You said: " + data.transcript;
-                    // Process command here if needed
-                });
-            };
-            
-            mediaRecorder.start();
-            setTimeout(() => {
-                mediaRecorder.stop();
-            }, 3000); // Record for 3 seconds
-        });
-    };
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+        if query:
+            query_lower = query.lower()
 
-# Button to start recording
-st.button("Start Recording", key="record")
+            if "stop" in query_lower or "exit" in query_lower:
+                st.write("Stopping assistant.")
+                speak("Goodbye, sir.")
+                st.session_state['listening'] = False
+                break
 
-# Audio player for playback
-st.markdown('<audio id="audioPlayer" controls></audio>', unsafe_allow_html=True)
+            elif "play" in query_lower:
+                search_term = query_lower.replace("play", "").strip()
+                result = search_youtube(search_term)
+                st.write(result)
+                speak(result)
 
-# Placeholder for displaying results
-st.markdown('<div id="result"></div>', unsafe_allow_html=True)
+            elif "open" in query_lower:
+                search_term = query_lower.replace("open", "").strip()
+                webbrowser.open(f"https://{search_term}.com")
+                st.write(f"Opening {search_term}.com")
+                speak(f"Opening {search_term}.com")
 
-# Add your command processing logic here
-if st.button("Stop Recording"):
-    st.write("Recording stopped. Please analyze the command.")
+            else:
+                chat = llm.start_chat()
+                ai_response = chat.send_message(query).candidates[0].content.parts[0].text.strip()
 
+                if ai_response:
+                    st.write(f"AI Response: {ai_response}")
+                    speak(ai_response)
