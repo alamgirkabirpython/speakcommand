@@ -57,7 +57,11 @@ html_code = """
                 recognition.interimResults = false;
 
                 recognition.lang = "en-US";
-                recognition.start();
+
+                recognition.onstart = function() {
+                    console.log("Speech recognition service has started");
+                    alert('Please start speaking...');
+                };
 
                 recognition.onresult = function(e) {
                     var speech_to_text = e.results[0][0].transcript;
@@ -69,7 +73,15 @@ html_code = """
                 recognition.onerror = function(e) {
                     console.error('Speech recognition error', e);
                     alert('Error occurred in recognition: ' + e.error);
-                }
+                    recognition.stop();
+                };
+
+                recognition.onend = function() {
+                    console.log("Speech recognition service has stopped");
+                    alert('Speech recognition has ended. Please click the button to try again.');
+                };
+
+                recognition.start();
             } else {
                 alert("Sorry, your browser does not support speech recognition.");
             }
