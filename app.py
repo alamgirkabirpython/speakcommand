@@ -81,7 +81,7 @@ st.markdown("""
 st.write('<div id="status"></div>', unsafe_allow_html=True)
 
 # Hidden input form for commands
-command = st.text_input("Say a command:", key="commandInput", on_change=None)
+command = st.text_input("Say a command:", key="commandInput")
 
 # Process command directly without a submit button
 if command:
@@ -111,4 +111,4 @@ if command:
             st.write(f"AI Response: {ai_response}")
 
 # Button to start listening
-st.button("Start Listening", on_click=listenForCommand)
+st.button("Start Listening", on_click=lambda: None)  # Placeholder button
