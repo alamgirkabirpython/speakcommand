@@ -48,4 +48,4 @@ st.components.v1.html(html_code)
 # Listen for messages from the JavaScript code
 if st.experimental_get_query_params().get("input_text"):
     transcribed_text = st.experimental_get_query_params()["input_text"][0]
-    st.write(f"Transcribed Text: **{transcribed_text}**")
+    st.write(f"Hello every one: **{transcribed_text}**")
