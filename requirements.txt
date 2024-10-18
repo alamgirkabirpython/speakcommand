@@ -1,10 +1,6 @@
 streamlit
-datetime
 speechrecognition
-google-generativeai
-langdetect
 gtts
-pygame
-requests
+langdetect
+google-generativeai
 langchain-core
-
