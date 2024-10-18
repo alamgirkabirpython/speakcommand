@@ -11,7 +11,7 @@ import base64
 from gtts import gTTS
 
 # Google Generative AI setup
-api_key = "YOUR_API_KEY_HERE"  # Replace with your actual API key
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"  # Replace with your actual API key
 genai.configure(api_key=api_key)
 
 # Define ChatPromptTemplate
