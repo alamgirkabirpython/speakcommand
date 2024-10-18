@@ -93,6 +93,10 @@ input_text = st.text_input("Transcribed Text:", st.session_state.get("input_text
 if input_text:
     st.session_state["input_text"] = input_text
 
+    # Reset the input after each submission
+    if st.session_state["input_text"]:
+        st.session_state["input_text"] = ""
+
     # Use Generative AI to respond
     if input_text:
         chat = llm.start_chat()
