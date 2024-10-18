@@ -5,3 +5,4 @@ pygame
 google-generativeai
 langdetect
 langchain-core
+pyaudio
