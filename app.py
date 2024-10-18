@@ -22,14 +22,11 @@ html_code = """
 
                 recognition.onresult = function(e) {
                     var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
-                    // Update the page with the recognized text
-                    document.getElementById("result").innerText = speech_to_text;
 
-                    // Send the transcribed text to Streamlit
-                    const xhr = new XMLHttpRequest();
-                    xhr.open("POST", "/update_transcribed_text", true);
-                    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-                    xhr.send(JSON.stringify({ text: speech_to_text }));
+                    // Send the transcribed text to Streamlit using a hidden input field
+                    const hiddenInput = document.getElementById("hiddenInput");
+                    hiddenInput.value = speech_to_text;
+                    hiddenInput.dispatchEvent(new Event('change'));
                 };
 
                 recognition.onerror = function(e) {
@@ -45,27 +42,29 @@ html_code = """
     </script>
 
     <button onclick="startDictation()">Click to Speak</button>
+    <input type="hidden" id="hiddenInput" onchange="updateStreamlit()">
     <h2>Transcribed Text:</h2>
     <p id="result"></p>
 """
 
+# Function to update Streamlit with the transcribed text
+def update_streamlit():
+    if 'input_text' in st.session_state:
+        st.session_state.input_text = st.session_state.hidden_input
+    else:
+        st.session_state.input_text = ""
+
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Streamlit's server-side to handle the transcribed text
-def update_transcribed_text():
-    if st.session_state.get("input_text"):
-        st.session_state.transcribed_text = st.session_state.input_text
-    else:
-        st.session_state.transcribed_text = ""
+# Update Streamlit state when the hidden input changes
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
-# Use a callback route to receive the transcribed text from JavaScript
-if "transcribed_text" not in st.session_state:
-    st.session_state.transcribed_text = ""
+# Display the transcribed text
+transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.input_text}**")
 
-# Handle the input from JavaScript
-if st.button("Get Transcribed Text"):
-    update_transcribed_text()
-
-# Show the transcribed text in the placeholder
-transcribed_text_placeholder.write(f"Transcribed Text: **{st.session_state.transcribed_text}**")
+# Capture the value from hidden input field
+hidden_input_value = st.text_input("Hidden Input", key="hidden_input", label_visibility="collapsed")
+if hidden_input_value:
+    st.session_state.input_text = hidden_input_value  # Store in session state
