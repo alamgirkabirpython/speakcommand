@@ -5,7 +5,7 @@ import speech_recognition as sr
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
 from gtts import gTTS
-import tempfile 
+import tempfile
 import langdetect
 
 # Initialize API Key for Google Generative AI
@@ -25,40 +25,22 @@ llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
 # Function to generate downloadable speech audio using gTTS
 def speak(text):
-    # Detect the language of the text
     lang = langdetect.detect(text)
-    
-    if lang == 'bn':  # If text is Bangla, use gTTS
-        tts = gTTS(text=text, lang='bn')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-            tts.save(fp.name)
-            st.audio(fp.name, format='audio/mp3')
-            st.download_button("Download Audio", data=open(fp.name, 'rb').read(), file_name="response_bn.mp3")
-    
-    elif lang == 'hi':  # If text is Hindi, use gTTS
-        tts = gTTS(text=text, lang='hi')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-            tts.save(fp.name)
-            st.audio(fp.name, format='audio/mp3')
-            st.download_button("Download Audio", data=open(fp.name, 'rb').read(), file_name="response_hi.mp3")
-    
-    else:  # Use gTTS for English or other languages
-        tts = gTTS(text=text, lang='en')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-            tts.save(fp.name)
-            st.audio(fp.name, format='audio/mp3')
-            st.download_button("Download Audio", data=open(fp.name, 'rb').read(), file_name="response_en.mp3")
+    tts = gTTS(text=text, lang=lang if lang in ['bn', 'hi', 'en'] else 'en')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        tts.save(fp.name)
+        st.audio(fp.name, format='audio/mp3')
+        st.download_button("Download Audio", data=open(fp.name, 'rb').read(), file_name=f"response_{lang}.mp3")
 
 # Greeting based on the time of day
 def wiseMe():
     hour = int(datetime.datetime.now().hour)
-    if hour >= 0 and hour < 12:
-        greeting = "Good Morning!"
-    elif hour >= 12 and hour < 18:
-        greeting = "Good Afternoon!"
+    if hour < 12:
+        return "Good Morning!"
+    elif hour < 18:
+        return "Good Afternoon!"
     else:
-        greeting = "Good Evening!"
-    return greeting
+        return "Good Evening!"
 
 # Function to listen for voice commands
 def listen():
@@ -95,34 +77,28 @@ if st.button("Speak Command"):
     st.session_state['listening'] = True
 
     while st.session_state.get('listening', False):
-        # Listen to user command
         query = listen()
-
         if query:
             query_lower = query.lower()
 
-            # Stop listening and exit if the user says "stop" or "exit"
             if "stop" in query_lower or "exit" in query_lower:
                 st.write("Stopping assistant.")
                 speak("Goodbye, sir.")
                 st.session_state['listening'] = False
                 break
 
-            # Check if the command is to play a song
             elif "play" in query_lower:
                 search_term = query_lower.replace("play", "").strip()
                 result = search_youtube(search_term)
                 st.write(result)
                 speak(result)
 
-            # Check if the command is to open a website
             elif "open" in query_lower:
                 search_term = query_lower.replace("open", "").strip()
                 webbrowser.open(f"https://{search_term}.com")
                 st.write(f"Opening {search_term}.com")
                 speak(f"Opening {search_term}.com")
 
-            # Generate AI response using Google Generative AI (Gemini) for other commands
             else:
                 chat = llm.start_chat()
                 full_translation_prompt_text = command_speaker.format(text=query)
