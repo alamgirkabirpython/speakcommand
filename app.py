@@ -6,7 +6,7 @@ import langdetect
 from gtts import gTTS
 
 # API key for Google Generative AI
-api_key = "YOUR_API_KEY"
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
