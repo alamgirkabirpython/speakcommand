@@ -1,66 +1,69 @@
 import streamlit as st
 import datetime
 import webbrowser
+import speech_recognition as sr
+import pyttsx3
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
+import langdetect 
 import tempfile
-import langdetect
 from gtts import gTTS
+import pygame
 import base64
 
-# Replace with your actual API key
+# Initialize Google Generative AI Model
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
-# Define ChatPromptTemplate
-command_speaker = ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are a helpful assistant. You follow the command that the user gives."),
-        ("user", "Follow the command: {text}")
-    ]
-)
+# Initialize pygame for audio playback
+pygame.mixer.init()
 
-# Initialize Google Generative AI Model
-llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
-
-# Function to create audio file using gTTS and provide download link
-def create_audio_file(text, lang):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-        tts = gTTS(text=text, lang=lang)
-        tts.save(fp.name)
-        return fp.name
-
-# Function to provide download link for the generated audio file
-def download_audio_file(file_path):
-    with open(file_path, "rb") as audio_file:
-        audio_bytes = audio_file.read()
-        b64_audio = base64.b64encode(audio_bytes).decode()
-        audio_html = f'<a href="data:audio/mp3;base64,{b64_audio}" download="output.mp3">Download Audio</a>'
-        st.markdown(audio_html, unsafe_allow_html=True)
-
-# Function to detect language and return appropriate TTS response
+# Function to speak text using pyttsx3 or gTTS
 def speak(text):
-    lang = langdetect.detect(text)  # Detect the language of the text
-    audio_file = create_audio_file(text, lang)  # Create audio file
-    st.write("Audio generated.")
-    download_audio_file(audio_file)  # Provide download link
+    lang = langdetect.detect(text)
+    if lang == 'bn':
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='bn')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    elif lang == 'hi':
+        with tempfile.NamedTemporaryFile(delete=True) as fp:
+            tts = gTTS(text=text, lang='hi')
+            tts.save(f"{fp.name}.mp3")
+            pygame.mixer.music.load(f"{fp.name}.mp3")
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
+    else:
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
 
-# Greeting based on the time of day
+# Greeting based on time of day
 def wiseMe():
     hour = int(datetime.datetime.now().hour)
     if hour >= 0 and hour < 12:
-        greeting = "Good Morning!"
+        return "Good Morning!"
     elif hour >= 12 and hour < 18:
-        greeting = "Good Afternoon!"
+        return "Good Afternoon!"
     else:
-        greeting = "Good Evening!"
-    return greeting
+        return "Good Evening!"
 
-# Function to search for a YouTube video
-def search_youtube(query):
-    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
-    webbrowser.open(youtube_search_url)
-    return f"Opening YouTube and searching for {query}"
+# Function to process audio input and recognize speech
+def listen(audio_data):
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(audio_data) as source:
+        audio = recognizer.record(source)
+        try:
+            command = recognizer.recognize_google(audio)
+            return command
+        except sr.UnknownValueError:
+            return "Sorry, I could not understand the audio."
+        except sr.RequestError:
+            return "Could not request results; check your network connection."
 
 # Streamlit UI
 st.title("Personal Assistant Jessica")
@@ -68,77 +71,79 @@ st.title("Personal Assistant Jessica")
 if 'greeting' not in st.session_state:
     st.session_state['greeting'] = wiseMe()
 
-st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you.")
+st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
-# HTML and JavaScript for microphone input
-st.markdown(
-    """
+# JavaScript to capture audio from microphone
+st.markdown("""
     <script>
-    function startRecording() {
-        const recognition = new webkitSpeechRecognition();
-        recognition.lang = 'en-US'; // Set the language here
-        recognition.interimResults = false;
+    var my_div = document.getElementById("mic_streamlit")
+    if (my_div) {
+        var my_div_1 = document.createElement('div')
+        my_div_1.setAttribute("id", "my_div_new")
+        document.getElementById("mic_streamlit").appendChild(my_div_1);
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream) {
+                const mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                const audioChunks = [];
+                mediaRecorder.addEventListener("dataavailable", function(event) {
+                    audioChunks.push(event.data);
+                });
 
-        recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            document.getElementById("command_output").value = transcript;
-            streamlitUpdate(transcript);
-        };
+                mediaRecorder.addEventListener("stop", function() {
+                    const audioBlob = new Blob(audioChunks);
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = function() {
+                        const base64AudioMessage = reader.result.split(',')[1];
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("POST", "/process_audio");
+                        xhr.setRequestHeader("Content-Type", "application/json");
+                        xhr.send(JSON.stringify({ "audio_data": base64AudioMessage }));
+                    };
+                });
 
-        recognition.onerror = function(event) {
-            console.error(event.error);
-        };
-
-        recognition.start();
-    }
-
-    function streamlitUpdate(command) {
-        const streamlitCommandOutput = window.parent.document.getElementById("command_output");
-        streamlitCommandOutput.value = command; // Update the hidden input
-        const event = new Event('change');
-        streamlitCommandOutput.dispatchEvent(event);
+                setTimeout(function() {
+                    mediaRecorder.stop();
+                }, 3000);
+            });
     }
     </script>
-    """,
-    unsafe_allow_html=True
-)
+    <div id="mic_streamlit"></div>
+""", unsafe_allow_html=True)
 
-# Text input to receive the command from JavaScript
-command_output = st.text_input("Command output", "", key="command_output")
+# Placeholder for audio processing
+audio_input = st.empty()
+
+# Function to search YouTube
+def search_youtube(query):
+    youtube_search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    webbrowser.open(youtube_search_url)
+    return f"Opening YouTube and searching for {query}"
 
 if st.button("Speak Command"):
-    st.write("Starting voice recognition...")
-    st.markdown('<button onclick="startRecording()">Start Voice Command</button>', unsafe_allow_html=True)
+    # Capture and process voice commands
+    st.write("Listening...")
+    # The `listen()` function will be triggered by JavaScript and process audio directly
 
-if command_output:
-    st.write(f"You said: {command_output}")
-    query_lower = command_output.lower()
-
-    # Stop listening and exit if the user says "stop" or "exit"
-    if "stop" in query_lower or "exit" in query_lower:
-        st.write("Stopping assistant.")
-        speak("Goodbye, sir.")
-
+# Placeholder for command response
+if 'command' in st.session_state:
+    st.write(f"You said: {st.session_state['command']}")
+    if "play" in st.session_state['command'].lower():
+        search_term = st.session_state['command'].replace("play", "").strip()
+        result = search_youtube(search_term)
+        st.write(result)
+        speak(result)
+    elif "open" in st.session_state['command'].lower():
+        search_term = st.session_state['command'].replace("open", "").strip()
+        webbrowser.open(f"https://{search_term}.com")
+        st.write(f"Opening {search_term}.com")
+        speak(f"Opening {search_term}.com")
     else:
-        # Check if the command is to play a song
-        if "play" in query_lower:
-            search_term = query_lower.replace("play", "").strip()
-            search_youtube(search_term)
-
-        # Check if the command is to open a website
-        elif "open" in query_lower:
-            search_term = query_lower.replace("open", "").strip()
-            webbrowser.open(f"https://{search_term}.com")
-            st.write(f"Opening {search_term}.com")
-            speak(f"Opening {search_term}.com")
-
-        # Generate AI response using Google Generative AI (Gemini) for other commands
-        else:
-            chat = llm.start_chat()
-            full_translation_prompt_text = command_speaker.format(text=query_lower)
-            full_translation_response = chat.send_message(full_translation_prompt_text)
-            ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
-
-            if ai_response:
-                st.write(f"AI Response: {ai_response}")
-                speak(ai_response)
+        chat = llm.start_chat()
+        prompt_text = command_speaker.format(text=st.session_state['command'])
+        full_translation_response = chat.send_message(prompt_text)
+        ai_response = full_translation_response.candidates[0].content.parts[0].text.strip()
+        if ai_response:
+            st.write(f"AI Response: {ai_response}")
+            speak(ai_response)
