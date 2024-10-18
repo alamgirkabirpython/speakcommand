@@ -6,7 +6,7 @@ import langdetect
 from gtts import gTTS
 
 # API key for Google Generative AI
-api_key ="AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"  # Replace with your actual API key
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
@@ -42,7 +42,7 @@ def save_tts_to_temp(tts):
 # Streamlit UI
 st.title("Personal Assistant Jessica")
 
-# Embedding JavaScript for voice recognition
+# Display instructions
 st.markdown("## Voice Assistant")
 st.write("Click the button below and start speaking.")
 
@@ -67,8 +67,11 @@ html_code = """
                 };
 
                 recognition.onerror = function(e) {
-                    recognition.stop();
+                    console.error('Speech recognition error', e);
+                    alert('Error occurred in recognition: ' + e.error);
                 }
+            } else {
+                alert("Sorry, your browser does not support speech recognition.");
             }
         }
     </script>
