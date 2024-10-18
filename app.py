@@ -83,7 +83,9 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-st.button("Start Listening", on_click=startRecognition)
+# Button to start voice recognition
+if st.button("Start Listening"):
+    st.markdown('<script>startRecognition();</script>', unsafe_allow_html=True)
 
 # Placeholder for displaying the command
 st.write("Command: ")
