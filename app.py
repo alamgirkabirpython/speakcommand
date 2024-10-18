@@ -5,17 +5,13 @@ import os
 import speech_recognition as sr
 import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
-import tempfile  # for playing the gTTS audio
-import langdetect  # to detect the language of the text
 from gtts import gTTS
-import pygame  # for playing gTTS audio
+import tempfile
+import langdetect
+import base64
 
-# Load your API key
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
-
-# Initialize pygame mixer for audio playback
-pygame.mixer.init()
 
 # Define ChatPromptTemplate
 command_speaker = ChatPromptTemplate.from_messages(
@@ -28,30 +24,20 @@ command_speaker = ChatPromptTemplate.from_messages(
 # Initialize Google Generative AI Model
 llm = genai.GenerativeModel(model_name="gemini-1.0-pro")
 
-# Function to speak text using gTTS for non-English languages and pyttsx3 for English
+# Function to generate audio and create a playable link
 def speak(text):
     lang = langdetect.detect(text)
-    
-    if lang == 'bn':  # If text is Bangla, use gTTS
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='bn')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
-    elif lang == 'hi':  # If text is Hindi, use gTTS
-        with tempfile.NamedTemporaryFile(delete=True) as fp:
-            tts = gTTS(text=text, lang='hi')
-            tts.save(f"{fp.name}.mp3")
-            pygame.mixer.music.load(f"{fp.name}.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
-    else:  # Use pyttsx3 for English or other languages
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
+    tts = gTTS(text=text, lang=lang)
+    with tempfile.NamedTemporaryFile(delete=False) as fp:
+        tts.save(fp.name)
+        audio_file = fp.name  # Save the path for later use
+    return audio_file
+
+# Function to play the audio
+def play_audio(file_path):
+    audio_file = open(file_path, "rb").read()
+    audio_b64 = base64.b64encode(audio_file).decode()
+    return f'<audio controls autoplay><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
 
 # Greeting based on the time of day
 def wiseMe():
@@ -93,7 +79,7 @@ st.title("Personal Assistant Jessica")
 if 'greeting' not in st.session_state:
     st.session_state['greeting'] = wiseMe()
 
-st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you.")
+st.write(f"{st.session_state['greeting']} I am Jessica, sir. Please tell me how I may help you")
 
 if st.button("Speak Command"):
     st.session_state['listening'] = True
@@ -108,7 +94,8 @@ if st.button("Speak Command"):
             # Stop listening and exit if the user says "stop" or "exit"
             if "stop" in query_lower or "exit" in query_lower:
                 st.write("Stopping assistant.")
-                speak("Goodbye, sir.")
+                audio_file = speak("Goodbye, sir.")
+                st.markdown(play_audio(audio_file), unsafe_allow_html=True)
                 st.session_state['listening'] = False
                 break
 
@@ -117,14 +104,16 @@ if st.button("Speak Command"):
                 search_term = query_lower.replace("play", "").strip()
                 result = search_youtube(search_term)
                 st.write(result)
-                speak(result)
+                audio_file = speak(result)
+                st.markdown(play_audio(audio_file), unsafe_allow_html=True)
 
             # Check if the command is to open a website
             elif "open" in query_lower:
                 search_term = query_lower.replace("open", "").strip()
                 webbrowser.open(f"https://{search_term}.com")
                 st.write(f"Opening {search_term}.com")
-                speak(f"Opening {search_term}.com")
+                audio_file = speak(f"Opening {search_term}.com")
+                st.markdown(play_audio(audio_file), unsafe_allow_html=True)
 
             # Generate AI response using Google Generative AI (Gemini) for other commands
             else:
@@ -135,4 +124,5 @@ if st.button("Speak Command"):
 
                 if ai_response:
                     st.write(f"AI Response: {ai_response}")
-                    speak(ai_response)
+                    audio_file = speak(ai_response)
+                    st.markdown(play_audio(audio_file), unsafe_allow_html=True)
