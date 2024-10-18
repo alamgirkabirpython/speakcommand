@@ -10,7 +10,7 @@ from gtts import gTTS
 import os
 
 # API key for Google Generative AI
-api_key = "YOUR_API_KEY"
+api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
@@ -54,14 +54,14 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to listen for voice commands
+# Function to listen for voice commands (using Google Web Speech API)
 def listen():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         st.write("Listening...")
         audio = r.listen(source)
         try:
-            command = r.recognize_google(audio)
+            command = r.recognize_google(audio)  # Use Google Web Speech API
             st.write(f"You said: {command}")
             return command
         except sr.UnknownValueError:
