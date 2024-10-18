@@ -11,7 +11,6 @@ from gtts import gTTS
 import tempfile
 import langdetect
 import base64
-from streamlit_audio_recorder import audio_recorder
 
 # Google Generative AI setup
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
@@ -45,13 +44,8 @@ def download_audio_file(file_path):
 
 # Function to detect language and return appropriate TTS response
 def speak(text):
-    # Detect the language of the text
     lang = langdetect.detect(text)
-    
-    # Create an audio file with gTTS
     audio_file = create_audio_file(text, lang)
-    
-    # Provide a download link for the audio file
     st.write("Audio generated.")
     download_audio_file(audio_file)
 
@@ -66,29 +60,10 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to listen for voice commands using Streamlit's audio_recorder
-def listen():
-    audio_bytes = audio_recorder()
-    
-    if audio_bytes:
-        recognizer = sr.Recognizer()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as audio_file:
-            audio_file.write(audio_bytes)
-            audio_file.flush()
-            audio = sr.AudioFile(audio_file.name)
-            with audio as source:
-                recognizer.adjust_for_ambient_noise(source)
-                audio_data = recognizer.record(source)
-            try:
-                command = recognizer.recognize_google(audio_data)
-                st.write(f"You said: {command}")
-                return command
-            except sr.UnknownValueError:
-                st.write("Sorry, I could not understand the audio.")
-                return ""
-            except sr.RequestError:
-                st.write("Could not request results; check your network connection.")
-                return ""
+# Function to get user input for commands
+def get_user_command():
+    command = st.text_input("Enter your command:", "")
+    return command
 
 # Function to search for a YouTube video
 def search_youtube(query):
@@ -108,8 +83,8 @@ if st.button("Speak Command"):
     st.session_state['listening'] = True
 
     while st.session_state.get('listening', False):
-        # Listen to user command
-        query = listen()
+        # Get user command
+        query = get_user_command()
 
         if query:
             query_lower = query.lower()
