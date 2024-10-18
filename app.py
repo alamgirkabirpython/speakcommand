@@ -30,8 +30,7 @@ def speak(text):
     tts = gTTS(text=text, lang=lang)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
         tts.save(fp.name)
-        audio_file = fp.name  # Save the path for later use
-    return audio_file
+        return fp.name  # Return the path of the saved audio file
 
 # Function to play the audio
 def play_audio(file_path):
