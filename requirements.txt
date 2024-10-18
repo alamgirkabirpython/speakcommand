@@ -4,3 +4,4 @@ gtts
 langdetect
 google-generativeai
 langchain-core
+base64
