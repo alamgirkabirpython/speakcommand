@@ -6,3 +6,4 @@ google-generativeai
 langdetect
 langchain-core
 pyaudio
+pyttsx3
