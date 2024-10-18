@@ -24,8 +24,9 @@ html_code = """
                     var speech_to_text = e.results[0][0].transcript;  // Get the transcribed text
                     // Update the page with the recognized text
                     document.getElementById("result").innerText = speech_to_text;
-                    // Set the transcribed text to a hidden input field
-                    document.getElementById("hiddenInput").value = speech_to_text;
+
+                    // Redirect to the same page with the transcribed text in the URL
+                    window.location.href = window.location.href.split('?')[0] + "?input_text=" + encodeURIComponent(speech_to_text);
                 };
 
                 recognition.onerror = function(e) {
@@ -43,21 +44,19 @@ html_code = """
     <button onclick="startDictation()">Click to Speak</button>
     <h2>Transcribed Text:</h2>
     <p id="result"></p>
-    <input type="hidden" id="hiddenInput" value="">
 """
 
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Retrieve the transcribed text from the hidden input using JavaScript
-st.write('<script>document.getElementById("hiddenInput").value</script>')
+# Get the input text from the query parameters
+input_text = st.experimental_get_query_params().get("input_text", [""])[0]
 
 # Use session state to hold transcribed text
 if 'transcribed_text' not in st.session_state:
     st.session_state.transcribed_text = ""
 
-# Check if the hidden input has been updated and update the session state
-input_text = st.experimental_get_query_params().get("input_text", [""])[0]
+# Update the session state with the new input text if it exists
 if input_text:
     st.session_state.transcribed_text = input_text
 
