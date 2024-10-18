@@ -6,7 +6,7 @@ import langdetect
 from gtts import gTTS
 
 # API key for Google Generative AI
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key ="AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
@@ -61,9 +61,9 @@ html_code = """
 
                 recognition.onresult = function(e) {
                     var speech_to_text = e.results[0][0].transcript;
-                    document.getElementById('input_text').value = speech_to_text;
+                    // Set the query parameter with the transcribed text
+                    window.location.href = window.location.href.split('?')[0] + '?input_text=' + encodeURIComponent(speech_to_text);
                     recognition.stop();
-                    document.getElementById('submit_button').click();  // Automatically submit the form
                 };
 
                 recognition.onerror = function(e) {
@@ -74,32 +74,20 @@ html_code = """
     </script>
 
     <button onclick="startDictation()">Click to Speak</button>
-    <br>
-    <form action="#" method="post">
-        <input type="text" id="input_text" name="input_text">
-        <input type="submit" id="submit_button" style="display: none;">
-    </form>
 """
 
 # Embedding the HTML into the Streamlit app
 st.components.v1.html(html_code)
 
-# Get the transcribed text (POST request from JavaScript)
-if st.session_state.get("input_text") is None:
-    st.session_state["input_text"] = ""
-
-input_text = st.text_input("Transcribed Text:", st.session_state.get("input_text"))
+# Read the transcribed text from URL query parameters
+query_params = st.experimental_get_query_params()
+input_text = query_params.get("input_text", [""])[0]
 
 if input_text:
-    st.session_state["input_text"] = input_text
-
-    # Reset the input after each submission
-    if st.session_state["input_text"]:
-        st.session_state["input_text"] = ""
-
+    st.write(f"Transcribed Text: {input_text}")
+    
     # Use Generative AI to respond
-    if input_text:
-        chat = llm.start_chat()
-        ai_response = chat.send_message(input_text).candidates[0].content.parts[0].text.strip()
-        st.write(f"AI Response: {ai_response}")
-        speak(ai_response)
+    chat = llm.start_chat()
+    ai_response = chat.send_message(input_text).candidates[0].content.parts[0].text.strip()
+    st.write(f"AI Response: {ai_response}")
+    speak(ai_response)
