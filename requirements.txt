@@ -1,6 +1,12 @@
 streamlit
+datetime
+webbrowser
 speechrecognition
-gtts
+pyttsx3
 google-generativeai
 langdetect
+gtts
+pygame
+tempfile
+requests
 langchain-core
