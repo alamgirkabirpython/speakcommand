@@ -11,6 +11,7 @@ from gtts import gTTS
 import tempfile
 import langdetect
 import base64
+from streamlit_audio_recorder import audio_recorder
 
 # Google Generative AI setup
 api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
@@ -65,22 +66,29 @@ def wiseMe():
         greeting = "Good Evening!"
     return greeting
 
-# Function to listen for voice commands
+# Function to listen for voice commands using Streamlit's audio_recorder
 def listen():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening...")
-        audio = r.listen(source)
-        try:
-            command = r.recognize_google(audio)
-            st.write(f"You said: {command}")
-            return command
-        except sr.UnknownValueError:
-            st.write("Sorry, I could not understand the audio.")
-            return ""
-        except sr.RequestError:
-            st.write("Could not request results; check your network connection.")
-            return ""
+    audio_bytes = audio_recorder()
+    
+    if audio_bytes:
+        recognizer = sr.Recognizer()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as audio_file:
+            audio_file.write(audio_bytes)
+            audio_file.flush()
+            audio = sr.AudioFile(audio_file.name)
+            with audio as source:
+                recognizer.adjust_for_ambient_noise(source)
+                audio_data = recognizer.record(source)
+            try:
+                command = recognizer.recognize_google(audio_data)
+                st.write(f"You said: {command}")
+                return command
+            except sr.UnknownValueError:
+                st.write("Sorry, I could not understand the audio.")
+                return ""
+            except sr.RequestError:
+                st.write("Could not request results; check your network connection.")
+                return ""
 
 # Function to search for a YouTube video
 def search_youtube(query):
