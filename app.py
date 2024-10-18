@@ -6,7 +6,7 @@ import langdetect
 from gtts import gTTS
 
 # API key for Google Generative AI
-api_key = "AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
+api_key ="AIzaSyARRfATt7eG3Kn5Ud4XPzDGflNRdiqlxBM"
 genai.configure(api_key=api_key)
 
 # Initialize Google Generative AI Model
@@ -83,22 +83,27 @@ st.components.v1.html(html_code)
 query_params = st.experimental_get_query_params()
 input_text = query_params.get("input_text", [""])[0]
 
+# Check if input_text is provided
 if input_text:
-    # Display the transcribed text (the query you say)
-    st.write(f"Query You Said: {input_text}")
+    # Display the transcribed text (query you said)
+    st.write(f"Transcribed Text (Query): {input_text}")
     
-    # Print the query in the console (for debugging or logs)
-    print(f"Query: {input_text}")
+    # Print the query in the Streamlit logs (useful for debugging)
+    st.write(f"Log (Query You Said): {input_text}")
     
-    # Use Generative AI to respond
+    # Use Generative AI to respond to the query
     chat = llm.start_chat()
-    ai_response = chat.send_message(input_text).candidates[0].content.parts[0].text.strip()
+    response = chat.send_message(input_text).candidates[0].content.parts[0].text.strip()
     
     # Display the AI response
-    st.write(f"AI Response: {ai_response}")
+    st.write(f"AI Response: {response}")
     
-    # Print the AI response in the console (for debugging or logs)
-    print(f"AI Response: {ai_response}")
+    # Print the AI response in the logs (for debugging)
+    st.write(f"Log (AI Response): {response}")
     
     # Speak the AI response
-    speak(ai_response)
+    speak(response)
+
+else:
+    # This message will help with debugging if the input_text is empty or not captured
+    st.write("No transcribed text found. Please try again.")
